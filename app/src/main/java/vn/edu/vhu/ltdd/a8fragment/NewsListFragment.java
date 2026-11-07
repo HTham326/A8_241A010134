@@ -13,6 +13,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 /** Danh sách tin. Bấm một tin để mở NewsDetailFragment. */
 public class NewsListFragment extends Fragment {
@@ -51,32 +52,45 @@ public class NewsListFragment extends Fragment {
         tvDaDoc = view.findViewById(R.id.tvDaDoc);
         LinearLayout box = view.findViewById(R.id.boxTin);
 
-        // Tạm thời sinh nút bằng code; từ Lab A9 sẽ thay bằng RecyclerView + Adapter
         for (int i = 0; i < TIEU_DE.length; i++) {
             final int viTri = i;
+
             Button b = new Button(requireContext());
             b.setText(TIEU_DE[i]);
             b.setAllCaps(false);
             b.setOnClickListener(v -> moChiTiet(viTri));
+
             box.addView(b);
         }
+
+        // Lấy ViewModel dùng chung với Activity
+        SharedViewModel sharedViewModel =
+                new ViewModelProvider(requireActivity())
+                        .get(SharedViewModel.class);
+
+        // Quan sát dữ liệu tin đã đọc
+        sharedViewModel.getTinDaDoc().observe(
+                getViewLifecycleOwner(), tieuDe -> {
+                    if (tieuDe == null || tieuDe.isEmpty()) {
+                        tvDaDoc.setText(R.string.list_none_read);
+                    } else {
+                        tvDaDoc.setText(
+                                getString(R.string.list_last_read, tieuDe));
+                    }
+                });
 
         // Lắng nghe kết quả từ màn hình chi tiết
         getParentFragmentManager().setFragmentResultListener(
                 REQUEST_KEY,
                 getViewLifecycleOwner(),
                 (requestKey, bundle) -> {
+
                     String tieuDe = bundle.getString(
                             NewsDetailFragment.KEY_TIEU_DE, "");
 
                     Log.d(TAG, "Nhận kết quả: đã đọc " + tieuDe);
 
-                    if (tieuDe.isEmpty()) {
-                        tvDaDoc.setText(R.string.list_none_read);
-                    } else {
-                        tvDaDoc.setText(
-                                getString(R.string.list_last_read, tieuDe));
-                    }
+                    sharedViewModel.setTinDaDoc(tieuDe);
                 });
     }
 
